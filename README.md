@@ -2,26 +2,43 @@
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 14.0.2.
 
-## Development server
+# What for
+This project is used to reproduce the problem that the imported css files that use **url() to introduce other media files** are packaged by **@angular-builders/custom-webpack** and **webpack** to output different URL reference results .
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+they both use **css-loader** to packaged css files.
+```javascript
+{
+  test: /styles.css$/i,
+  use: [
+    {
+      loader: "css-loader",
+      options: {
+        //   url:false
+      },
+    },
+  ],
+},
+```
 
-## Code scaffolding
+# What is
+**@angular-builders/custom-webpack** with the custom config packaged file will use the **File://** to construct a URL 
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+**webpack** packaged file will use the **require** construct a URL
 
-## Build
+**@angular-builders/custom-webpack's** behavior leads to [https://github.com/webpack/webpack-dev-server/issues/1815#issuecomment-1182801823](https://github.com/webpack/webpack-dev-server/issues/1815#issuecomment-1182801823)
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+# How to reproduce
+Just compare the two products packaged using the build command
+* npm run build:ng
+  Use **@angular-builders/custom-webpack** for packaging, the configuration is in the **angular.json**, and the attached custom configuration is in **build/custom-webpack.config.js**
+  ```javascript
+  //output
+  new URL("./assets/ttk.ttf","file:///.../css-packaged/src/styles.css")
+  ```
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+* npm run build:pure
+  Use **webpack** for packaging, the configuration is in the **build/custom-webpack.config.js**
+    ```javascript
+  //output
+  new URL(/* asset import */ __webpack_require__(/*! ./ttk.ttf */ \"./src/assets/ttk.ttf\")
+  ```
